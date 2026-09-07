@@ -1,0 +1,967 @@
+<title>Dependency Injection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Questrial&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3f0e8;
+    --well:#e7e2d4;
+    --surface:#ffffff;
+    --surface-2:#faf8f2;
+    --ink:#211d16;
+    --ink-soft:#6b6558;
+    --ink-faint:#9d9788;
+    --border:#e0dccd;
+    --border-strong:#c9c2ac;
+    --gold:#8a6300;
+    --gold-ink:#6e4f00;
+    --gold-soft:#f2e3bd;
+    --gold-line:#c9a545;
+    --green:#276b30;
+    --green-soft:#e2ecdf;
+    --red:#a83f2a;
+    --red-soft:#f3e1da;
+    --blue:#2f6f8f;
+    --blue-line:#5f9db8;
+    --blue-soft:#dbe9ee;
+    --stage-shadow:0 40px 90px -30px rgba(30,24,10,0.35), 0 2px 0 rgba(30,24,10,0.06);
+    --code-bg:#1c1a15;
+    --code-ink:#e9e4d6;
+    --code-kw:#e3a24a;
+    --code-tp:#8fbfe0;
+    --code-fn:#c9d17a;
+    --code-str:#9fc98a;
+    --code-cm:#847c68;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --radius-sm:8px;
+    --font-display:'Questrial', 'Segoe UI', sans-serif;
+    --font-mono:'Space Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#171410;
+      --well:#0e0c09;
+      --surface:#211d16;
+      --surface-2:#1a1712;
+      --ink:#f1ecdf;
+      --ink-soft:#b4ac9a;
+      --ink-faint:#7d7666;
+      --border:#332e23;
+      --border-strong:#453f30;
+      --gold:#e3ac47;
+      --gold-ink:#f2c877;
+      --gold-soft:#3a2c11;
+      --gold-line:#a9822f;
+      --green:#7ac086;
+      --green-soft:#20301f;
+      --red:#e08669;
+      --red-soft:#3a241d;
+      --blue:#7fc4e0;
+      --blue-line:#4a90ab;
+      --blue-soft:#123241;
+      --stage-shadow:0 40px 90px -30px rgba(0,0,0,0.6), 0 2px 0 rgba(0,0,0,0.2);
+      --code-bg:#0f0d09;
+      --code-ink:#e9e4d6;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#171410;
+    --well:#0e0c09;
+    --surface:#211d16;
+    --surface-2:#1a1712;
+    --ink:#f1ecdf;
+    --ink-soft:#b4ac9a;
+    --ink-faint:#7d7666;
+    --border:#332e23;
+    --border-strong:#453f30;
+    --gold:#e3ac47;
+    --gold-ink:#f2c877;
+    --gold-soft:#3a2c11;
+    --gold-line:#a9822f;
+    --green:#7ac086;
+    --green-soft:#20301f;
+    --red:#e08669;
+    --red-soft:#3a241d;
+    --blue:#7fc4e0;
+    --blue-line:#4a90ab;
+    --blue-soft:#123241;
+    --stage-shadow:0 40px 90px -30px rgba(0,0,0,0.6), 0 2px 0 rgba(0,0,0,0.2);
+    --code-bg:#0f0d09;
+    --code-ink:#e9e4d6;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--well);
+    color:var(--ink);
+    font-family:var(--font-display);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--gold-soft); color:var(--ink);}
+
+  .well{
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 55%),
+      var(--well);
+  }
+
+  .frame{
+    position:absolute; top:50%; left:50%;
+    width:1280px; height:720px;
+    transform-origin:center center;
+    will-change:transform;
+  }
+
+  .stage{
+    position:relative;
+    width:100%; height:100%;
+    background:var(--bg);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--stage-shadow);
+    overflow:hidden;
+    border:1px solid var(--border);
+  }
+
+  .progress{
+    position:absolute; top:0; left:0; height:3px;
+    background:var(--gold);
+    z-index:40;
+    transition:width .35s ease;
+  }
+
+  .slides{
+    position:absolute; inset:0;
+  }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding:54px 64px 0 64px;
+    opacity:0;
+    transform:translateX(28px);
+    transition:opacity .38s ease, transform .38s ease;
+    pointer-events:none;
+  }
+  .slide.active{
+    opacity:1; transform:translateX(0);
+    pointer-events:auto;
+    z-index:2;
+  }
+  .slide.prevOf{ transform:translateX(-28px); }
+  @media (prefers-reduced-motion: reduce){
+    .slide{ transition:opacity .01s linear; transform:none; }
+    .card, .hurts-item, .gold-item, .wcard li, .dbox, .engine-btn{ animation:none !important; }
+    .engine-icon{ transition:none !important; }
+  }
+
+  /* ---- entrance animation for slide content ---- */
+  @keyframes riseIn{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:translateY(0); } }
+  .slide.active .card,
+  .slide.active .hurts-item,
+  .slide.active .gold-item,
+  .slide.active .wcard li,
+  .slide.active .engine-btn{
+    animation:riseIn .48s cubic-bezier(.22,.7,.32,1) both;
+  }
+  .slide.active .card:nth-child(2), .slide.active .hurts-item:nth-child(2), .slide.active .gold-item:nth-child(2), .slide.active .wcard li:nth-child(2), .slide.active .engine-btn:nth-child(2){ animation-delay:.06s; }
+  .slide.active .card:nth-child(3), .slide.active .hurts-item:nth-child(3), .slide.active .gold-item:nth-child(3), .slide.active .wcard li:nth-child(3), .slide.active .engine-btn:nth-child(3){ animation-delay:.12s; }
+  .slide.active .card:nth-child(4), .slide.active .hurts-item:nth-child(4), .slide.active .wcard li:nth-child(4){ animation-delay:.18s; }
+  .slide.active .card:nth-child(5){ animation-delay:.24s; }
+  .slide.active .card:nth-child(6){ animation-delay:.30s; }
+  .slide.active .dbox{ animation:riseIn .48s cubic-bezier(.22,.7,.32,1) both; }
+  .slide.active .diagram .dbox:nth-child(3){ animation-delay:.14s; }
+  .slide.active .diagram .dbox:nth-child(5){ animation-delay:.28s; }
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font-mono);
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gold-ink);
+    background:var(--gold-soft);
+    border-radius:999px;
+    padding:5px 12px;
+    width:fit-content;
+  }
+  .top-row{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .top-row .mark{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+    color:var(--ink-faint); text-transform:uppercase; padding-top:6px;
+  }
+
+  h1.title{
+    font-size:42px; margin:0 0 6px 0; font-weight:400; line-height:1.08;
+    text-wrap:balance; letter-spacing:-.01em;
+  }
+  p.subtitle{
+    margin:0 0 26px 0; font-family:var(--font-mono);
+    font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+
+  .num-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:34px; height:34px; border-radius:10px;
+    font-family:var(--font-mono); font-weight:700; font-size:13px;
+    color:#fff; flex:none;
+  }
+  .num-badge.gold{ background:var(--gold); }
+  .num-badge.green{ background:var(--green); }
+  .num-badge.red{ background:var(--red); }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-md);
+  }
+
+  code, pre{ font-family:var(--font-mono); }
+  .code-card{
+    background:var(--code-bg); border-radius:var(--radius-md);
+    padding:16px 18px; overflow:auto; color:var(--code-ink);
+  }
+  .code-card pre{ margin:0; font-size:13px; line-height:1.62; white-space:pre; }
+  .kw{color:var(--code-kw);} .tp{color:var(--code-tp);} .fn{color:var(--code-fn);}
+  .str{color:var(--code-str);} .cm{color:var(--code-cm); font-style:italic;}
+
+  .callout{
+    margin-top:auto;
+    margin-bottom:58px;
+    border-left:3px solid var(--gold-line);
+    background:var(--surface-2);
+    border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+    padding:14px 20px;
+  }
+  .callout .cl-label{
+    font-family:var(--font-mono); font-size:10.5px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--gold-ink); margin-bottom:5px; font-weight:700;
+  }
+  .callout .cl-body{ font-size:14.5px; line-height:1.55; color:var(--ink); max-width:920px;}
+  .callout .cl-body b{ color:var(--gold-ink); font-weight:700; }
+
+  .footerbar{
+    position:absolute; left:0; right:0; bottom:0; height:52px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px 0 64px;
+    border-top:1px solid var(--border);
+    background:color-mix(in srgb, var(--bg) 88%, transparent);
+    font-family:var(--font-mono); font-size:11px; color:var(--ink-faint);
+    letter-spacing:.05em;
+    z-index:30;
+  }
+  .footerbar .fb-left{ display:flex; align-items:center; gap:10px; }
+  .footerbar .fb-left .fb-section{ color:var(--ink-soft); }
+  .nav-controls{ display:flex; align-items:center; gap:14px; }
+  .nav-btn{
+    width:30px; height:30px; border-radius:50%;
+    border:1px solid var(--border-strong); background:var(--surface);
+    color:var(--ink); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:background .15s ease, transform .1s ease;
+  }
+  .nav-btn:hover{ background:var(--gold-soft); }
+  .nav-btn:active{ transform:scale(.92); }
+  .nav-btn svg{ width:14px; height:14px; }
+  .nav-count{ font-variant-numeric:tabular-nums; min-width:52px; text-align:center; }
+
+  .chrome-top{
+    position:absolute; top:16px; right:18px; z-index:50;
+    display:flex; gap:8px;
+  }
+  .chrome-btn{
+    width:30px; height:30px; border-radius:8px;
+    border:1px solid var(--border-strong); background:var(--surface);
+    color:var(--ink-soft); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; opacity:.55; transition:opacity .15s ease, background .15s ease;
+  }
+  .chrome-btn:hover{ opacity:1; background:var(--gold-soft); }
+  .chrome-btn svg{ width:15px; height:15px; }
+
+  a{ color:inherit; }
+  button{ font-family:var(--font-display); }
+  :focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  /* ---- Slide 1 : Title ---- */
+  .s-title{ justify-content:center; align-items:flex-start; padding-bottom:120px; }
+  .s-title .eyebrow{ margin-bottom:26px; }
+  .s-title h1{ font-size:80px; margin:0 0 16px 0; letter-spacing:-.02em; line-height:1; }
+  .s-title .lede{ font-family:var(--font-mono); font-size:14px; color:var(--ink-soft); letter-spacing:.02em; }
+  .s-title .rule{ width:64px; height:2px; background:var(--gold-line); margin:26px 0; }
+  .s-title .by{ font-size:15px; color:var(--ink-soft); }
+  .s-title .by b{ color:var(--ink); font-weight:400; }
+
+  /* ---- Slide 2 : Contents ---- */
+  .toc{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; max-width:760px; }
+  .toc li{ border-bottom:1px solid var(--border); }
+  .toc li:first-child{ border-top:1px solid var(--border); }
+  .toc button{
+    width:100%; display:flex; align-items:baseline; gap:18px;
+    background:none; border:none; cursor:pointer; text-align:left;
+    padding:13px 4px; color:var(--ink); font-size:16px;
+    transition:padding-left .15s ease, color .15s ease;
+  }
+  .toc button:hover{ padding-left:12px; color:var(--gold-ink); }
+  .toc .toc-n{ font-family:var(--font-mono); font-size:12px; color:var(--gold-ink); width:20px; flex:none; }
+  .toc .toc-t{ flex:1; }
+  .toc .toc-arrow{ opacity:0; transition:opacity .15s ease; font-family:var(--font-mono); font-size:13px; color:var(--gold-ink); }
+  .toc button:hover .toc-arrow{ opacity:1; }
+
+  /* ---- generic two column ---- */
+  .cols2{ display:grid; grid-template-columns:1fr 1fr; gap:34px; flex:1; min-height:0; }
+  .col{ display:flex; flex-direction:column; min-height:0; }
+
+  /* Pre-DI slide */
+  .anti-card{ flex:1; display:flex; flex-direction:column; padding:20px 22px; }
+  .anti-card .ac-head{ display:flex; align-items:center; gap:10px; margin-bottom:2px; }
+  .anti-card .ac-title{ font-size:17px; }
+  .anti-card .ac-tag{ font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; color:var(--red); text-transform:uppercase; margin-bottom:14px; margin-left:44px;}
+  .anti-card .code-card{ flex:1; }
+
+  .hurts-label{ font-family:var(--font-mono); font-size:11px; letter-spacing:.12em; color:var(--red); text-transform:uppercase; margin-bottom:14px; font-weight:700; }
+  .hurts-list{ display:flex; flex-direction:column; gap:14px; }
+  .hurts-item h4{ margin:0 0 3px 0; font-size:15px; font-weight:400; color:var(--red); }
+  .hurts-item p{ margin:0; font-size:13px; line-height:1.5; color:var(--ink-soft); }
+
+  /* What is DI diagram */
+  .diagram{ display:flex; align-items:center; justify-content:center; gap:10px; margin:26px 0 14px 0; }
+  .dbox{ border:1.5px solid var(--border-strong); border-radius:10px; padding:14px 16px; font-size:13px; text-align:center; background:var(--surface); min-width:118px; }
+  .dbox.iface{ border-style:dashed; border-color:var(--gold-line); color:var(--gold-ink); font-style:italic; }
+  .dbox .dbox-sub{ display:block; font-size:11px; opacity:.8; }
+  .darrow{ color:var(--ink-faint); font-size:20px; }
+  .dcaption{ text-align:center; font-size:12.5px; color:var(--ink-soft); font-style:italic; margin-bottom:8px; }
+
+  .gold-list{ display:flex; flex-direction:column; gap:16px; }
+  .gold-item h4{ margin:0 0 3px 0; font-size:16px; font-weight:400; color:var(--gold-ink); }
+  .gold-item p{ margin:0; font-size:13.5px; line-height:1.55; color:var(--ink-soft); }
+  .gold-item .gn{ font-family:var(--font-mono); margin-right:4px; }
+
+  /* How DI is performed */
+  .cols3{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; flex:1; min-height:0; }
+  .method-card{ padding:18px 18px 16px 18px; display:flex; flex-direction:column; }
+  .method-card .mc-badge{ margin-bottom:10px; }
+  .method-card h3{ margin:0; font-size:16px; font-weight:400; }
+  .method-card .mc-tag{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:.1em; color:var(--ink-faint); text-transform:uppercase; margin-bottom:10px; }
+  .method-card .code-card{ flex:1; padding:12px 13px; margin-bottom:10px; }
+  .method-card .code-card pre{ font-size:11px; line-height:1.55; }
+  .method-card p{ margin:0; font-size:12.5px; line-height:1.5; color:var(--ink-soft); }
+  .method-foot{ font-size:13px; color:var(--ink-soft); line-height:1.55; padding-top:16px; max-width:1080px; }
+  .method-foot b{ color:var(--ink); font-weight:400; }
+
+  /* benefit cards grid */
+  .grid5{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; flex:1; min-height:0; align-content:start; }
+  .benefit-card{ padding:16px 15px; }
+  .benefit-card .num-badge{ margin-bottom:10px; width:30px; height:30px; font-size:12px; }
+  .benefit-card h4{ margin:0 0 6px 0; font-size:14px; font-weight:400; line-height:1.25; }
+  .benefit-card p{ margin:0; font-size:11.5px; line-height:1.48; color:var(--ink-soft); }
+
+  /* when to use */
+  .wcol{ display:flex; flex-direction:column; }
+  .wcol h3{ font-family:var(--font-mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase; margin:0 0 16px 0; font-weight:700; }
+  .wcol.reach h3{ color:var(--green); }
+  .wcol.think h3{ color:var(--red); }
+  .wcard{ border:1px solid var(--border); border-radius:var(--radius-md); padding:18px 20px; flex:1; }
+  .wcard ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; }
+  .wcard li{ display:flex; gap:10px; font-size:13.5px; line-height:1.5; color:var(--ink); }
+  .wcard .mk{ flex:none; font-weight:700; }
+  .wcol.reach .mk{ color:var(--green); }
+  .wcol.think .mk{ color:var(--red); }
+
+  /* DI in code */
+  .codecol h3{ font-size:15px; margin:0 0 12px 0; font-weight:400; }
+  .codecol .code-card{ margin-bottom:12px; }
+  .codecol p{ font-size:12.5px; line-height:1.5; color:var(--ink-soft); margin:0; }
+  .also-seen{ font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); padding-top:14px; letter-spacing:.02em; }
+  .also-seen b{ color:var(--ink-soft); font-weight:700; }
+
+  /* cons / pros grid 6 */
+  .grid6{ display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr); gap:16px; flex:1; min-height:0; }
+  .grid6 .benefit-card{ padding:16px 17px; }
+  .grid6 .benefit-card h4{ font-size:14px; }
+  .grid6 .benefit-card p{ font-size:12px; }
+
+  /* closing / quiz time slide */
+  .s-bye{ justify-content:center; align-items:center; text-align:center; padding-bottom:120px; }
+  .s-bye .eyebrow{ margin-bottom:24px; }
+  .s-bye h1{ font-size:64px; margin:0 0 14px 0; }
+  .s-bye .lede{ font-family:var(--font-mono); font-size:13px; color:var(--ink-soft); }
+  .s-bye .rule{ width:56px; height:2px; background:var(--gold-line); margin:24px auto; }
+  .s-bye .by{ font-size:14px; color:var(--ink-soft); }
+
+  /* ---- Car analogy slide ---- */
+  .car-figure{ margin:0; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .car-svg{ width:100%; max-width:480px; height:auto; color:var(--ink); }
+  .car-svg .engine-bay-outline{ fill:none; stroke:var(--gold-line); stroke-width:2; stroke-dasharray:5 4; }
+  .car-svg .engine-bay-lead{ stroke:var(--gold-line); stroke-width:1.3; stroke-dasharray:2 3; }
+  .car-svg .engine-bay-label{ font-family:var(--font-mono); fill:var(--gold-ink); font-size:9.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+  .car-svg .chassis-label{ font-family:var(--font-mono); fill:var(--ink-soft); font-size:11px; letter-spacing:.08em; }
+  .car-svg .window-line{ stroke:currentColor; opacity:.5; }
+  .engine-icon{ transform-origin:96px 130px; transition:opacity .2s ease, transform .2s ease; opacity:1; transform:scale(1) translateY(0); }
+  .engine-icon.engine-out{ opacity:0; transform:scale(.7) translateY(6px); }
+  .engine-gas .ei-shape{ fill:var(--gold); }
+  .engine-electric .ei-shape{ fill:var(--blue); }
+  .engine-test .ei-shape{ fill:var(--green); }
+  .car-figure figcaption{ margin-top:12px; font-size:12.5px; font-style:italic; color:var(--ink-soft); text-align:center; max-width:440px; line-height:1.5; }
+
+  .engine-side{ display:flex; flex-direction:column; justify-content:center; height:100%; gap:20px; }
+  .engine-side .es-label{ font-family:var(--font-mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:2px; }
+  .engine-picker{ display:flex; flex-direction:column; gap:9px; }
+  .engine-btn{
+    display:flex; align-items:center; gap:12px; padding:11px 14px;
+    border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface);
+    cursor:pointer; text-align:left; font-family:var(--font-display);
+    transition:border-color .2s ease, background .2s ease, transform .12s ease;
+  }
+  .engine-btn:hover{ transform:translateX(2px); }
+  .engine-btn:active{ transform:scale(.98); }
+  .engine-btn .eb-dot{ width:12px; height:12px; border-radius:50%; flex:none; background:var(--ink-faint); }
+  .engine-btn[data-engine="gas"] .eb-dot{ background:var(--gold); }
+  .engine-btn[data-engine="electric"] .eb-dot{ background:var(--blue); }
+  .engine-btn[data-engine="test"] .eb-dot{ background:var(--green); }
+  .engine-btn .eb-text strong{ display:block; font-size:13.5px; font-weight:400; color:var(--ink); }
+  .engine-btn .eb-text small{ display:block; font-family:var(--font-mono); font-size:10px; color:var(--ink-faint); margin-top:2px; }
+  .engine-btn.active[data-engine="gas"]{ border-color:var(--gold-line); background:var(--gold-soft); }
+  .engine-btn.active[data-engine="electric"]{ border-color:var(--blue-line); background:var(--blue-soft); }
+  .engine-btn.active[data-engine="test"]{ border-color:var(--green); background:var(--green-soft); }
+
+  .map-card{ padding:13px 16px; }
+  .map-row{ display:flex; align-items:baseline; gap:10px; font-size:11.5px; padding:6px 0; border-bottom:1px solid var(--border); }
+  .map-row:last-child{ border-bottom:none; }
+  .map-a{ color:var(--ink-soft); flex:1; }
+  .map-arrow{ color:var(--ink-faint); font-family:var(--font-mono); flex:none; }
+  .map-b{ color:var(--ink); font-family:var(--font-mono); font-size:11px; flex:1; text-align:right; }
+
+  @media (max-width:720px){
+    .chrome-top{ display:none; }
+  }
+</style>
+
+<div class="well">
+  <div class="frame" id="frame">
+    <div class="stage" id="stage">
+      <div class="progress" id="progress"></div>
+
+      <div class="chrome-top">
+        <button class="chrome-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
+        </button>
+        <button class="chrome-btn" id="fsBtn" title="Fullscreen" aria-label="Fullscreen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg>
+        </button>
+      </div>
+
+      <div class="slides" id="slides">
+
+        <!-- 1 : TITLE -->
+        <section class="slide s-title" data-section="Title">
+          <span class="eyebrow">WG · APD</span>
+          <h1>dependency injection</h1>
+          <div class="lede">ON DI, BEST PRACTICES, MITIGATIONS</div>
+          <div class="rule"></div>
+          <div class="by">Presented by <b>Dzaki</b> and <b>Nicholas</b></div>
+        </section>
+
+        <!-- 2 : CONTENTS -->
+        <section class="slide" data-section="Contents">
+          <div class="top-row"><span class="eyebrow">Index</span></div>
+          <h1 class="title">Contents</h1>
+          <p class="subtitle">&nbsp;</p>
+          <ul class="toc" id="toc"></ul>
+        </section>
+
+        <!-- 3 : PRE-DI -->
+        <section class="slide" data-section="Pre-DI: The Problem">
+          <div class="top-row"><span class="eyebrow">Problem</span></div>
+          <h1 class="title">Pre-DI: The Problem</h1>
+          <p class="subtitle">Why tightly-coupled code becomes brittle and hard to test</p>
+          <div class="cols2" style="flex:0 0 300px;">
+            <div class="col">
+              <div class="card anti-card">
+                <div class="ac-head"><span class="num-badge red">1</span><span class="ac-title">Tightly&#8209;Coupled Code</span></div>
+                <div class="ac-tag">Anti-pattern</div>
+                <div class="code-card"><pre><span class="kw">class</span> <span class="tp">OrderService</span> {
+  <span class="kw">private</span> <span class="tp">StripeGateway</span> payment = <span class="kw">new</span> <span class="fn">StripeGateway</span>(); <span class="cm">// hardcoded!</span>
+  <span class="kw">private</span> <span class="tp">FileLogger</span> logger = <span class="kw">new</span> <span class="fn">FileLogger</span>();      <span class="cm">// hardcoded!</span>
+
+  <span class="kw">void</span> <span class="fn">placeOrder</span>(<span class="tp">Order</span> order) {
+    logger.<span class="fn">log</span>(<span class="str">"Placing order "</span> + order.id);
+    payment.<span class="fn">charge</span>(order.total);
+  }
+}</pre></div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="hurts-label">Why this hurts</div>
+              <div class="hurts-list">
+                <div class="hurts-item"><h4>1. Hardcoded.</h4><p>OrderService is welded to StripeGateway and FileLogger by name — switching to PayPal means editing OrderService itself.</p></div>
+                <div class="hurts-item"><h4>2. Untestable.</h4><p>A unit test for placeOrder() always hits the real Stripe API and writes a real log file. There's no way to substitute a fake.</p></div>
+                <div class="hurts-item"><h4>3. Backwards dependency.</h4><p>The high-level OrderService depends directly on low-level concrete classes, not on abstractions.</p></div>
+                <div class="hurts-item"><h4>4. Duplicated setup.</h4><p>Every class that needs a payment gateway repeats the same <code>new StripeGateway()</code> line.</p></div>
+              </div>
+            </div>
+          </div>
+          <div class="callout">
+            <div class="cl-label">The setup for what's next</div>
+            <div class="cl-body">This is exactly the problem DI solves — instead of a class creating its own dependencies, something else hands them in from outside.</div>
+          </div>
+        </section>
+
+        <!-- 4 : WHAT IS DI -->
+        <section class="slide" data-section="What Is DI?">
+          <div class="top-row"><span class="eyebrow">Definition</span></div>
+          <h1 class="title">What Is Dependency Injection?</h1>
+          <p class="subtitle">The core idea, and how it relates to Inversion of Control</p>
+          <div class="cols2" style="flex:0 0 300px;">
+            <div class="col" style="justify-content:center;">
+              <div class="diagram">
+                <div class="dbox">Composition Root</div>
+                <span class="darrow">&#8594;</span>
+                <div class="dbox">OrderService</div>
+                <span class="darrow">&#8594;</span>
+                <div class="dbox iface">PaymentGateway<span class="dbox-sub">&#171;interface&#187;</span></div>
+              </div>
+              <div class="dcaption">Composition Root builds OrderService and hands it a PaymentGateway</div>
+            </div>
+            <div class="col">
+              <div class="gold-list">
+                <div class="gold-item"><h4><span class="gn">1.</span>Depend on abstractions.</h4><p>OrderService should hold a reference to a PaymentGateway interface, not a concrete StripeGateway.</p></div>
+                <div class="gold-item"><h4><span class="gn">2.</span>Receive, don't construct.</h4><p>Instead of <code>new StripeGateway()</code> inside OrderService, the concrete implementation is handed in from outside — typically as a constructor parameter.</p></div>
+                <div class="gold-item"><h4><span class="gn">3.</span>Someone else decides.</h4><p>A separate piece of code — a "composition root," or a DI framework/container — decides which concrete implementation to hand over.</p></div>
+              </div>
+            </div>
+          </div>
+          <div class="callout">
+            <div class="cl-label">DI vs. IoC — a common mix-up</div>
+            <div class="cl-body">DI is one way to implement a bigger idea called <b>Inversion of Control</b>. Control over <i>which</i> implementation gets used is inverted — it moves out of the class itself and into whoever wires the app together.</div>
+          </div>
+        </section>
+
+        <!-- 5 : THE CAR ANALOGY -->
+        <section class="slide" data-section="The Car Analogy">
+          <div class="top-row"><span class="eyebrow">Analogy</span></div>
+          <h1 class="title">Same Car, Different Engine</h1>
+          <p class="subtitle">A picture of DI that doesn't need a single line of code</p>
+          <div class="cols2" style="flex:0 0 300px;">
+            <div class="col">
+              <figure class="car-figure">
+                <svg class="car-svg" viewBox="0 0 460 226" role="img" aria-label="A car chassis labeled OrderService with one dashed engine bay socket, wired to the PaymentGateway interface. Three different engines — gas, electric, and a test rig — can plug into that same bay without changing the car.">
+                  <rect x="40" y="100" width="340" height="60" rx="18" fill="none" stroke="currentColor" stroke-width="2.5"></rect>
+                  <rect x="150" y="48" width="150" height="52" rx="16" fill="none" stroke="currentColor" stroke-width="2.5"></rect>
+                  <rect class="window-line" x="160" y="58" width="122" height="34" rx="4" fill="none" stroke-width="1.5"></rect>
+                  <line class="window-line" x1="221" y1="58" x2="221" y2="92" stroke-width="1.5"></line>
+                  <circle cx="110" cy="160" r="26" fill="none" stroke="currentColor" stroke-width="3"></circle>
+                  <circle cx="110" cy="160" r="8" fill="currentColor"></circle>
+                  <circle cx="310" cy="160" r="26" fill="none" stroke="currentColor" stroke-width="3"></circle>
+                  <circle cx="310" cy="160" r="8" fill="currentColor"></circle>
+                  <rect class="engine-bay-outline" x="52" y="108" width="88" height="44" rx="8"></rect>
+                  <line class="engine-bay-lead" x1="96" y1="90" x2="96" y2="106"></line>
+                  <text class="engine-bay-label" x="96" y="84" text-anchor="middle">ENGINE BAY</text>
+                  <g id="engineIcon" class="engine-icon engine-gas">
+                    <rect class="ei-shape" x="76" y="120" width="40" height="20" rx="3"></rect>
+                    <rect class="ei-shape" x="84" y="112" width="10" height="10" rx="2"></rect>
+                    <rect class="ei-shape" x="98" y="112" width="10" height="10" rx="2"></rect>
+                  </g>
+                  <text class="chassis-label" x="210" y="210" text-anchor="middle">OrderService</text>
+                </svg>
+                <figcaption>The chassis stays identical. Only the engine plugged into its one socket changes.</figcaption>
+              </figure>
+            </div>
+            <div class="col engine-side">
+              <div>
+                <div class="es-label">Plug in an engine</div>
+                <div class="engine-picker" id="enginePicker" role="radiogroup" aria-label="Choose an engine to plug into the car">
+                  <button class="engine-btn active" data-engine="gas" role="radio" aria-checked="true">
+                    <span class="eb-dot"></span>
+                    <span class="eb-text"><strong>Gas Engine</strong><small>StripeGateway</small></span>
+                  </button>
+                  <button class="engine-btn" data-engine="electric" role="radio" aria-checked="false">
+                    <span class="eb-dot"></span>
+                    <span class="eb-text"><strong>Electric Motor</strong><small>PayPalGateway</small></span>
+                  </button>
+                  <button class="engine-btn" data-engine="test" role="radio" aria-checked="false">
+                    <span class="eb-dot"></span>
+                    <span class="eb-text"><strong>Test Rig</strong><small>FakePaymentGateway</small></span>
+                  </button>
+                </div>
+              </div>
+              <div class="card map-card">
+                <div class="map-row"><span class="map-a">Car chassis</span><span class="map-arrow">=</span><span class="map-b">OrderService</span></div>
+                <div class="map-row"><span class="map-a">Engine bay</span><span class="map-arrow">=</span><span class="map-b">PaymentGateway interface</span></div>
+                <div class="map-row"><span class="map-a">Swappable engine</span><span class="map-arrow">=</span><span class="map-b">Concrete implementation</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="callout">
+            <div class="cl-label">The takeaway</div>
+            <div class="cl-body">The <b>car body</b> never changes — it only expects something that fits the <b>engine bay</b>. Swapping Gas &#8594; Electric &#8594; Test Rig is exactly what swapping StripeGateway &#8594; PayPalGateway &#8594; a fake looks like in DI: the dependency changes, the dependent class doesn't.</div>
+          </div>
+        </section>
+
+        <!-- 6 : HOW DI IS PERFORMED -->
+        <section class="slide" data-section="How DI Is Performed">
+          <div class="top-row"><span class="eyebrow">Concept</span></div>
+          <h1 class="title">How DI Is Performed</h1>
+          <p class="subtitle">3 ways to inject a dependency</p>
+          <div class="cols3">
+            <div class="card method-card">
+              <span class="num-badge gold mc-badge">1</span>
+              <h3>Constructor Injection</h3>
+              <div class="mc-tag">Default choice</div>
+              <div class="code-card"><pre><span class="kw">class</span> <span class="tp">OrderService</span> {
+  <span class="kw">private</span> <span class="kw">final</span> <span class="tp">PaymentGateway</span> payment;
+
+  <span class="fn">OrderService</span>(<span class="tp">PaymentGateway</span> payment) {
+    <span class="kw">this</span>.payment = payment;
+  }
+}</pre></div>
+              <p>Dependencies arrive as constructor parameters. The object can never exist in a half-configured state — if it exists, its dependencies are set.</p>
+            </div>
+            <div class="card method-card">
+              <span class="num-badge gold mc-badge">2</span>
+              <h3>Setter Injection</h3>
+              <div class="mc-tag">For optional deps</div>
+              <div class="code-card"><pre><span class="kw">class</span> <span class="tp">OrderService</span> {
+  <span class="kw">private</span> <span class="tp">PaymentGateway</span> payment;
+
+  <span class="kw">void</span> <span class="fn">setPaymentGateway</span>(<span class="tp">PaymentGateway</span> p) {
+    <span class="kw">this</span>.payment = p;
+  }
+}</pre></div>
+              <p>Dependencies are set via a public setter after construction. Useful for optional dependencies, but the object can briefly exist unconfigured.</p>
+            </div>
+            <div class="card method-card">
+              <span class="num-badge gold mc-badge">3</span>
+              <h3>Interface Injection</h3>
+              <div class="mc-tag">Rarely used today</div>
+              <div class="code-card"><pre><span class="kw">interface</span> <span class="tp">PaymentAware</span> {
+  <span class="kw">void</span> <span class="fn">injectPayment</span>(
+    <span class="tp">PaymentGateway</span> p);
+}
+
+<span class="kw">class</span> <span class="tp">OrderService</span>
+  <span class="kw">implements</span> <span class="tp">PaymentAware</span> {
+  <span class="kw">public</span> <span class="kw">void</span> <span class="fn">injectPayment</span>(
+    <span class="tp">PaymentGateway</span> p) {
+    <span class="kw">this</span>.payment = p;
+  }
+}</pre></div>
+              <p>The class implements an interface exposing an inject method, which a framework calls. More ceremony, so it has mostly fallen out of favor.</p>
+            </div>
+          </div>
+          <div class="method-foot"><b>Which one should you use?</b> Constructor injection is the default in modern frameworks — it makes required dependencies explicit and impossible to forget. Reach for setter injection only when a dependency is genuinely optional.</div>
+          <div style="height:52px;"></div>
+        </section>
+
+        <!-- 7 : WHY DI IS GOOD -->
+        <section class="slide" data-section="Why DI Is Good For Applications">
+          <div class="top-row"><span class="eyebrow">Benefits</span></div>
+          <h1 class="title">Why DI Is Good For Applications</h1>
+          <p class="subtitle">The payoff for the extra indirection</p>
+          <div class="grid5">
+            <div class="card benefit-card"><span class="num-badge gold">1</span><h4>Testability</h4><p>Swap StripeGateway for a FakePaymentGateway in tests. No real API calls, no real charges, fast and deterministic tests of placeOrder() alone.</p></div>
+            <div class="card benefit-card"><span class="num-badge gold">2</span><h4>Loose Coupling</h4><p>OrderService only knows about the PaymentGateway interface, never a concrete class — the two can change independently of each other.</p></div>
+            <div class="card benefit-card"><span class="num-badge gold">3</span><h4>Flexibility &amp; Swappability</h4><p>Switching from Stripe to PayPal is a one-line change where OrderService is wired up, not a rewrite of OrderService itself.</p></div>
+            <div class="card benefit-card"><span class="num-badge gold">4</span><h4>Follows the Dependency Inversion Principle</h4><p>The "D" in SOLID: both high-level and low-level modules depend on abstractions, not on each other directly.</p></div>
+            <div class="card benefit-card"><span class="num-badge gold">5</span><h4>Centralized Configuration</h4><p>Every "which implementation goes where" decision lives in one place — a composition root or container config — not scattered through the codebase.</p></div>
+          </div>
+          <div style="height:52px;"></div>
+        </section>
+
+        <!-- 8 : WHEN TO USE -->
+        <section class="slide" data-section="When To (Not) Use DI">
+          <div class="top-row"><span class="eyebrow">Trade-offs</span></div>
+          <h1 class="title">When To (Not) Use DI</h1>
+          <p class="subtitle">It's not free — recognize when it earns its keep</p>
+          <div class="cols2" style="flex:1;">
+            <div class="wcol reach">
+              <h3>Reach for DI when&hellip;</h3>
+              <div class="wcard"><ul>
+                <li><span class="mk">&#10003;</span>You have multiple interchangeable implementations — different payment gateways, storage backends, or environments (dev/test/prod).</li>
+                <li><span class="mk">&#10003;</span>You need to unit test business logic in isolation from external systems (databases, APIs, the file system).</li>
+                <li><span class="mk">&#10003;</span>The app is large enough that wiring dependencies by hand everywhere becomes repetitive and error-prone.</li>
+                <li><span class="mk">&#10003;</span>You're following a clean/hexagonal architecture and want business logic decoupled from infrastructure.</li>
+              </ul></div>
+            </div>
+            <div class="wcol think">
+              <h3>Think twice when&hellip;</h3>
+              <div class="wcard"><ul>
+                <li><span class="mk">&#10007;</span>The class has one, permanent, simple dependency that will never change or need mocking (e.g. a Math utility).</li>
+                <li><span class="mk">&#10007;</span>It's a small script or prototype — a full DI framework adds setup overhead with no real payoff yet.</li>
+                <li><span class="mk">&#10007;</span>The extra indirection makes a small codebase harder to read and trace than it needs to be.</li>
+                <li><span class="mk">&#10007;</span>Performance is extremely critical and a reflection-based DI framework adds unacceptable overhead (rare, but real).</li>
+              </ul></div>
+            </div>
+          </div>
+          <div style="height:52px;"></div>
+        </section>
+
+        <!-- 9 : DI IN CODE -->
+        <section class="slide" data-section="DI In Code">
+          <div class="top-row"><span class="eyebrow">Example</span></div>
+          <h1 class="title">DI In Code</h1>
+          <p class="subtitle">From manual wiring to a real framework</p>
+          <div class="cols2" style="flex:1;">
+            <div class="col codecol">
+              <h3>Manual DI — no framework</h3>
+              <div class="code-card"><pre><span class="cm">// composition root — one place that wires the whole app</span>
+<span class="tp">PaymentGateway</span> payment = <span class="kw">new</span> <span class="fn">StripeGateway</span>(apiKey);
+<span class="tp">Logger</span> logger = <span class="kw">new</span> <span class="fn">FileLogger</span>(<span class="str">"app.log"</span>);
+<span class="tp">OrderService</span> orderService =
+    <span class="kw">new</span> <span class="fn">OrderService</span>(payment, logger);</pre></div>
+              <p>Nothing magic here — just one place ("the composition root") that constructs everything and passes it along. This is DI even without a framework.</p>
+            </div>
+            <div class="col codecol">
+              <h3>Spring (Java) — annotation-driven</h3>
+              <div class="code-card"><pre><span class="fn">@Component</span>
+<span class="kw">class</span> <span class="tp">StripeGateway</span> <span class="kw">implements</span> <span class="tp">PaymentGateway</span> { <span class="cm">/* ... */</span> }
+
+<span class="fn">@Component</span>
+<span class="kw">class</span> <span class="tp">OrderService</span> {
+  <span class="kw">private</span> <span class="kw">final</span> <span class="tp">PaymentGateway</span> payment;
+
+  <span class="fn">@Autowired</span>
+  <span class="fn">OrderService</span>(<span class="tp">PaymentGateway</span> payment) { <span class="kw">this</span>.payment = payment; }
+}</pre></div>
+              <p>The framework scans for @Component classes, works out the dependency graph, and wires it for you. Same idea, automated.</p>
+            </div>
+          </div>
+          <div class="also-seen"><b>Also seen in</b> &middot; .NET Core — services.AddScoped&lt;IPaymentGateway, StripeGateway&gt;() &middot; Google Guice — @Inject &middot; Angular — @Injectable()</div>
+          <div style="height:52px;"></div>
+        </section>
+
+        <!-- 10 : CONS -->
+        <section class="slide" data-section="Cons Of DI">
+          <div class="top-row"><span class="eyebrow">Trade-offs</span></div>
+          <h1 class="title">Cons Of DI</h1>
+          <p class="subtitle">The honest trade-offs</p>
+          <div class="grid6">
+            <div class="card benefit-card"><span class="num-badge red">1</span><h4>Adds Indirection</h4><p>"Jump to definition" no longer shows what actually runs — you have to know how the wiring works ("magic").</p></div>
+            <div class="card benefit-card"><span class="num-badge red">2</span><h4>More boilerplate for small projects</h4><p>Interfaces, constructors, and configuration add ceremony that a five-file script simply doesn't need.</p></div>
+            <div class="card benefit-card"><span class="num-badge red">3</span><h4>A real learning curve</h4><p>Heavyweight frameworks like Spring can feel opaque until you understand what the container is doing.</p></div>
+            <div class="card benefit-card"><span class="num-badge red">4</span><h4>Errors surface at runtime</h4><p>A missing or misconfigured dependency often only fails when the app starts, not at compile time.</p></div>
+            <div class="card benefit-card"><span class="num-badge red">5</span><h4>Can be over-used</h4><p>Injecting everything "just in case" adds abstraction and files without any real payoff.</p></div>
+            <div class="card benefit-card"><span class="num-badge red">6</span><h4>Possible performance overhead</h4><p>Reflection-heavy containers add startup and sometimes runtime cost — rarely decisive, but real.</p></div>
+          </div>
+          <div style="height:52px;"></div>
+        </section>
+
+        <!-- 11 : PROS -->
+        <section class="slide" data-section="Pros Of DI">
+          <div class="top-row"><span class="eyebrow">Strengths</span></div>
+          <h1 class="title">Pros Of DI</h1>
+          <p class="subtitle">Why teams reach for it</p>
+          <div class="grid6">
+            <div class="card benefit-card"><span class="num-badge green">1</span><h4>Dramatically Improves Testability</h4><p>Mock or stub any dependency — tests run fast, deterministic, and never touch a real database or API.</p></div>
+            <div class="card benefit-card"><span class="num-badge green">2</span><h4>Promotes Loose Coupling</h4><p>High-level code depends on interfaces, not concrete classes, so either side can change independently.</p></div>
+            <div class="card benefit-card"><span class="num-badge green">3</span><h4>Makes Swapping Implementations Trivial</h4><p>Changing a payment provider or a storage backend becomes a wiring change, not a rewrite.</p></div>
+            <div class="card benefit-card"><span class="num-badge green">4</span><h4>Encourages Coding To Interfaces</h4><p>Because a dependency must be injected as an abstraction, the design ends up more interface-driven overall.</p></div>
+            <div class="card benefit-card"><span class="num-badge green">5</span><h4>Centralizes Construction Logic</h4><p>Object graphs are built in one predictable place instead of scattered new calls across the codebase.</p></div>
+            <div class="card benefit-card"><span class="num-badge green">6</span><h4>Supports Flexible Object Lifetimes</h4><p>Containers can manage singleton, per-request, or transient lifetimes for you, consistently.</p></div>
+          </div>
+          <div style="height:52px;"></div>
+        </section>
+
+        <!-- 12 : QUIZ TIME -->
+        <section class="slide s-bye" data-section="Quiz Time">
+          <span class="eyebrow">Wrap-Up</span>
+          <h1>quiz time</h1>
+          <div class="lede">LET'S SEE WHAT STUCK</div>
+          <div class="rule"></div>
+          <div class="by">Fire away — Dzaki and Nicholas</div>
+        </section>
+
+      </div>
+
+      <div class="footerbar">
+        <div class="fb-left">Dependency Injection <span class="fb-section" id="fbSection">&middot; Title</span></div>
+        <div class="nav-controls">
+          <button class="nav-btn" id="prevBtn" aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <span class="nav-count" id="navCount">1 / 12</span>
+          <button class="nav-btn" id="nextBtn" aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+        <div style="width:120px;"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var idx = 0;
+
+  var toc = [
+    "Pre-DI: The Problem",
+    "What Is DI? &middot; The Car Analogy &middot; How Is DI Performed?",
+    "Why DI Is Good For Applications",
+    "When DI Should / Should Not Be Used",
+    "How Does DI Look Like In Code &mdash; Frameworks",
+    "Cons Of DI",
+    "Pros Of DI (Cons Mitigation)",
+    "Quiz Time"
+  ];
+  var tocTargets = [2,3,6,7,8,9,10,11]; // slide indices (0-based) each toc row jumps to
+  var tocEl = document.getElementById('toc');
+  toc.forEach(function(label, i){
+    var li = document.createElement('li');
+    var btn = document.createElement('button');
+    btn.innerHTML = '<span class="toc-n">0'+(i+1)+'</span><span class="toc-t">'+label+'</span><span class="toc-arrow">&#8594;</span>';
+    btn.addEventListener('click', function(){ goTo(tocTargets[i]); });
+    li.appendChild(btn);
+    tocEl.appendChild(li);
+  });
+
+  var progress = document.getElementById('progress');
+  var navCount = document.getElementById('navCount');
+  var fbSection = document.getElementById('fbSection');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+
+  function render(prevIdx){
+    slides.forEach(function(s, i){
+      s.classList.toggle('active', i === idx);
+      s.classList.toggle('prevOf', prevIdx !== undefined && i === prevIdx && i !== idx);
+    });
+    progress.style.width = (((idx+1)/total)*100) + '%';
+    navCount.textContent = (idx+1) + ' / ' + total;
+    fbSection.textContent = '· ' + slides[idx].getAttribute('data-section');
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === total - 1;
+    try{ localStorage.setItem('di-deck-slide', String(idx)); }catch(e){}
+  }
+
+  function goTo(n){
+    if(n < 0 || n >= total || n === idx) return;
+    var prevIdx = idx;
+    idx = n;
+    render(prevIdx);
+  }
+  function next(){ goTo(idx+1); }
+  function prev(){ goTo(idx-1); }
+
+  prevBtn.addEventListener('click', prev);
+  nextBtn.addEventListener('click', next);
+
+  window.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key === 'Home'){ goTo(0); }
+    else if(e.key === 'End'){ goTo(total-1); }
+    else if(e.key === 'f' || e.key === 'F'){ toggleFullscreen(); }
+  });
+
+  // touch swipe
+  var touchX = null;
+  var stage = document.getElementById('stage');
+  stage.addEventListener('touchstart', function(e){ touchX = e.changedTouches[0].clientX; }, {passive:true});
+  stage.addEventListener('touchend', function(e){
+    if(touchX === null) return;
+    var dx = e.changedTouches[0].clientX - touchX;
+    if(Math.abs(dx) > 46){ dx < 0 ? next() : prev(); }
+    touchX = null;
+  }, {passive:true});
+
+  // fullscreen
+  var fsBtn = document.getElementById('fsBtn');
+  function toggleFullscreen(){
+    try{
+      var el = document.getElementById('frame').parentElement.parentElement || document.body;
+      if(!document.fullscreenElement){
+        (document.body.requestFullscreen || function(){}).call(document.body);
+      } else {
+        document.exitFullscreen && document.exitFullscreen();
+      }
+    }catch(e){}
+  }
+  fsBtn.addEventListener('click', toggleFullscreen);
+
+  // theme toggle (manual override)
+  var themeBtn = document.getElementById('themeBtn');
+  function currentTheme(){
+    var attr = document.documentElement.getAttribute('data-theme');
+    if(attr) return attr;
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  themeBtn.addEventListener('click', function(){
+    var next = currentTheme() === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('di-deck-theme', next); }catch(e){}
+  });
+  try{
+    var savedTheme = localStorage.getItem('di-deck-theme');
+    if(savedTheme){ document.documentElement.setAttribute('data-theme', savedTheme); }
+  }catch(e){}
+
+  // responsive scale
+  var frame = document.getElementById('frame');
+  function layout(){
+    var w = window.innerWidth, h = window.innerHeight;
+    var scale = Math.min(w/1280, h/720) * 0.94;
+    frame.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+  }
+  window.addEventListener('resize', layout);
+  layout();
+
+  // ---- Car analogy: swappable engine (changes only on click — no auto-play) ----
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var engineData = [
+    { key:'gas', cls:'engine-gas', shape:
+      '<rect class="ei-shape" x="76" y="120" width="40" height="20" rx="3"></rect>' +
+      '<rect class="ei-shape" x="84" y="112" width="10" height="10" rx="2"></rect>' +
+      '<rect class="ei-shape" x="98" y="112" width="10" height="10" rx="2"></rect>' },
+    { key:'electric', cls:'engine-electric', shape:
+      '<polygon class="ei-shape" points="100,110 82,134 94,134 88,150 114,122 100,122 106,110"></polygon>' },
+    { key:'test', cls:'engine-test', shape:
+      '<rect class="ei-shape" x="90" y="112" width="12" height="6" rx="1"></rect>' +
+      '<path class="ei-shape" d="M92,118 L92,128 L80,146 Q78,150 82,150 L110,150 Q114,150 112,146 L100,128 L100,118 Z"></path>' }
+  ];
+  var engineIcon = document.getElementById('engineIcon');
+  var enginePicker = document.getElementById('enginePicker');
+  var engineBtns = enginePicker ? Array.prototype.slice.call(enginePicker.querySelectorAll('.engine-btn')) : [];
+  var engineCurrent = 0;
+
+  function setEngine(i, animate){
+    if(!engineIcon) return;
+    i = ((i % engineData.length) + engineData.length) % engineData.length;
+    engineCurrent = i;
+    engineBtns.forEach(function(b, bi){
+      var on = bi === i;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    var apply = function(){
+      engineIcon.innerHTML = engineData[i].shape;
+      engineIcon.setAttribute('class', 'engine-icon ' + engineData[i].cls);
+    };
+    if(animate && !reduceMotion){
+      engineIcon.classList.add('engine-out');
+      setTimeout(function(){
+        apply();
+        engineIcon.classList.remove('engine-out');
+      }, 190);
+    } else {
+      apply();
+    }
+  }
+
+  engineBtns.forEach(function(btn, i){
+    btn.addEventListener('click', function(){ setEngine(i, true); });
+  });
+
+  if(engineIcon){ setEngine(0, false); }
+
+  // restore last slide
+  try{
+    var saved = parseInt(localStorage.getItem('di-deck-slide'), 10);
+    if(!isNaN(saved) && saved >= 0 && saved < total){ idx = saved; }
+  }catch(e){}
+  render();
+})();
+</script>
