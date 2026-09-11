@@ -379,6 +379,20 @@
   .also-seen{ font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); padding-top:14px; letter-spacing:.02em; }
   .also-seen b{ color:var(--ink-soft); font-weight:700; }
 
+  /* DI anti-patterns */
+  .smell-layout{ display:grid; grid-template-columns:1.08fr .92fr; gap:28px; flex:1; min-height:0; }
+  .smell-code{ display:flex; flex-direction:column; min-height:0; }
+  .smell-code .code-card{ flex:1; }
+  .smell-code .code-card pre{ font-size:11.5px; line-height:1.56; }
+  .smell-caption{ margin:10px 0 0; font-size:12.5px; line-height:1.5; color:var(--ink-soft); }
+  .smell-list{ display:grid; grid-template-columns:1fr 1fr; gap:12px; align-content:start; }
+  .smell-card{ padding:14px 15px; border-left:3px solid var(--red); }
+  .smell-card h4{ margin:0 0 5px; font-size:14px; font-weight:400; color:var(--red); }
+  .smell-card p{ margin:0; font-size:11.5px; line-height:1.45; color:var(--ink-soft); }
+  .smell-card code{ color:var(--ink); font-size:.95em; }
+  .smell-verdict{ grid-column:1 / -1; padding:13px 15px; background:var(--gold-soft); border-color:var(--gold-line); }
+  .smell-verdict h4{ color:var(--gold-ink); }
+
   /* cons / pros grid 6 */
   .grid6{ display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr); gap:16px; flex:1; min-height:0; }
   .grid6 .benefit-card{ padding:16px 17px; }
@@ -734,7 +748,39 @@
           <div style="height:52px;"></div>
         </section>
 
-        <!-- 10 : CONS -->
+        <!-- 10 : ANTI-PATTERNS -->
+        <section class="slide" data-section="DI Anti-Patterns">
+          <div class="top-row"><span class="eyebrow">Design Smells</span></div>
+          <h1 class="title">When DI Becomes the Problem</h1>
+          <p class="subtitle">Injection exposes design problems — it does not automatically solve them</p>
+          <div class="smell-layout">
+            <div class="smell-code">
+              <div class="code-card"><pre><span class="kw">class</span> <span class="tp">CheckoutService</span> {
+  <span class="fn">CheckoutService</span>(
+    <span class="tp">CartRepository</span> carts,
+    <span class="tp">PricingService</span> pricing,
+    <span class="tp">InventoryService</span> inventory,
+    <span class="tp">PaymentGateway</span> payments,
+    <span class="tp">FraudChecker</span> fraud,
+    <span class="tp">ShippingService</span> shipping,
+    <span class="tp">EmailSender</span> email,
+    <span class="tp">Analytics</span> analytics
+  ) { <span class="cm">/* DI did not make this cohesive */</span> }
+}</pre></div>
+              <p class="smell-caption">The constructor is giving useful feedback: this class probably owns too many responsibilities. Hiding those dependencies behind a container would only hide the smell.</p>
+            </div>
+            <div class="smell-list">
+              <div class="card smell-card"><h4>Injecting everything</h4><p>Values and tiny pure helpers do not need an interface, factory, and registration “just in case.” Add seams where change or testing needs them.</p></div>
+              <div class="card smell-card"><h4>Constructor over-injection</h4><p>A long parameter list is usually a cohesion problem. Split the class around capabilities or use-cases instead of bundling dependencies.</p></div>
+              <div class="card smell-card"><h4>Service locator</h4><p>Calling <code>container.get()</code> inside business code hides required dependencies and moves failures to runtime.</p></div>
+              <div class="card smell-card"><h4>One interface per class</h4><p>An interface with one permanent implementation can be ceremony without a boundary. Abstract behavior, not every concrete type.</p></div>
+              <div class="card smell-card smell-verdict"><h4>The real test</h4><p>DI should make boundaries clearer. If the wiring grows faster than the behavior, revisit the design—not merely the container configuration.</p></div>
+            </div>
+          </div>
+          <div style="height:52px;"></div>
+        </section>
+
+        <!-- 11 : CONS -->
         <section class="slide" data-section="Cons Of DI">
           <div class="top-row"><span class="eyebrow">Trade-offs</span></div>
           <h1 class="title">Cons Of DI</h1>
@@ -750,7 +796,7 @@
           <div style="height:52px;"></div>
         </section>
 
-        <!-- 11 : PROS -->
+        <!-- 12 : PROS -->
         <section class="slide" data-section="Pros Of DI">
           <div class="top-row"><span class="eyebrow">Strengths</span></div>
           <h1 class="title">Pros Of DI</h1>
@@ -766,7 +812,7 @@
           <div style="height:52px;"></div>
         </section>
 
-        <!-- 12 : QUIZ TIME -->
+        <!-- 13 : QUIZ TIME -->
         <section class="slide s-bye" data-section="Quiz Time">
           <span class="eyebrow">Wrap-Up</span>
           <h1>quiz time</h1>
@@ -781,7 +827,7 @@
         <div class="fb-left">Dependency Injection <span class="fb-section" id="fbSection">&middot; Title</span></div>
         <div class="nav-controls">
           <button class="nav-btn" id="prevBtn" aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <span class="nav-count" id="navCount">1 / 12</span>
+          <span class="nav-count" id="navCount">1 / 13</span>
           <button class="nav-btn" id="nextBtn" aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg></button>
         </div>
         <div style="width:120px;"></div>
@@ -803,11 +849,12 @@
     "Why DI Is Good For Applications",
     "When DI Should / Should Not Be Used",
     "How Does DI Look Like In Code &mdash; Frameworks",
+    "DI Anti-Patterns",
     "Cons Of DI",
     "Pros Of DI (Cons Mitigation)",
     "Quiz Time"
   ];
-  var tocTargets = [2,3,6,7,8,9,10,11]; // slide indices (0-based) each toc row jumps to
+  var tocTargets = [2,3,6,7,8,9,10,11,12]; // slide indices (0-based) each toc row jumps to
   var tocEl = document.getElementById('toc');
   toc.forEach(function(label, i){
     var li = document.createElement('li');
