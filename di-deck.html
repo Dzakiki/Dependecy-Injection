@@ -1933,63 +1933,6 @@
           <div style="height: 52px"></div>
         </section>
 
-        <!-- 11 : CONS -->
-        <section class="slide" data-section="Cons Of DI">
-          <div class="top-row"><span class="eyebrow">Trade-offs</span></div>
-          <h1 class="title">Cons Of DI</h1>
-          <p class="subtitle">The honest trade-offs</p>
-          <div class="grid6">
-            <div class="card benefit-card">
-              <span class="num-badge red">1</span>
-              <h4>Adds Indirection</h4>
-              <p>
-                "Jump to definition" no longer shows what actually runs, you
-                have to know how the wiring works ("magic").
-              </p>
-            </div>
-            <div class="card benefit-card">
-              <span class="num-badge red">2</span>
-              <h4>More boilerplate for small projects</h4>
-              <p>
-                Interfaces, constructors, and configuration add ceremony that a
-                five-file script simply doesn't need.
-              </p>
-            </div>
-            <div class="card benefit-card">
-              <span class="num-badge red">3</span>
-              <h4>A real learning curve</h4>
-              <p>
-                Heavyweight frameworks like Spring can feel opaque until you
-                understand what the container is doing.
-              </p>
-            </div>
-            <div class="card benefit-card">
-              <span class="num-badge red">4</span>
-              <h4>Errors surface at runtime</h4>
-              <p>
-                A missing or misconfigured dependency often only fails when the
-                app starts, not at compile time.
-              </p>
-            </div>
-            <div class="card benefit-card">
-              <span class="num-badge red">5</span>
-              <h4>Can be over-used</h4>
-              <p>
-                Injecting everything "just in case" adds abstraction and files
-                without any real payoff.
-              </p>
-            </div>
-            <div class="card benefit-card">
-              <span class="num-badge red">6</span>
-              <h4>Possible performance overhead</h4>
-              <p>
-                Reflection-heavy containers add startup and sometimes runtime
-                cost. Rarely decisive, but real.
-              </p>
-            </div>
-          </div>
-          <div style="height: 52px"></div>
-        </section>
 
         <!-- 12 : PROS -->
         <section class="slide" data-section="Pros Of DI">
@@ -2049,10 +1992,26 @@
           <div style="height: 52px"></div>
         </section>
 
+        <!-- 11 : CONS -->
+        <section class="slide" data-section="Cons Of DI">
+          <div class="top-row"><span class="eyebrow">Trade-offs</span></div>
+          <h1 class="title">Cons Of DI</h1>
+          <p class="subtitle">The honest trade-offs</p>
+          <div class="grid6">
+            <div class="card benefit-card"><span class="num-badge red">1</span><h4>Adds Indirection</h4><p>"Jump to definition" no longer shows what actually runs — you have to know how the wiring works ("magic").</p></div>
+            <div class="card benefit-card"><span class="num-badge red">2</span><h4>More boilerplate for small projects</h4><p>Interfaces, constructors, and configuration add ceremony that a five-file script simply doesn't need.</p></div>
+            <div class="card benefit-card"><span class="num-badge red">3</span><h4>A real learning curve</h4><p>Heavyweight frameworks like Spring can feel opaque until you understand what the container is doing.</p></div>
+            <div class="card benefit-card"><span class="num-badge red">4</span><h4>Errors surface at runtime</h4><p>A missing or misconfigured dependency often only fails when the app starts, not at compile time.</p></div>
+            <div class="card benefit-card"><span class="num-badge red">5</span><h4>Can be over-used</h4><p>Injecting everything "just in case" adds abstraction and files without any real payoff.</p></div>
+            <div class="card benefit-card"><span class="num-badge red">6</span><h4>Possible performance overhead</h4><p>Reflection-heavy containers add startup and sometimes runtime cost — rarely decisive, but real.</p></div>
+          </div>
+          <div style="height:52px;"></div>
+        </section>
+
         <!-- 13 : QUIZ TIME -->
         <section class="slide s-bye" data-section="Quiz Time">
           <span class="eyebrow">Wrap-Up</span>
-          <h1>quiz time</h1>
+          <h1>qna time</h1>
           <div class="lede">LET'S SEE WHAT STUCK</div>
           <div class="rule"></div>
           <div class="by">Fire away — Dzaki and Nicholas</div>
